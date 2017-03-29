@@ -11,10 +11,10 @@ namespace RobotController
         {
             bool[] controls = new bool[8];
 
-            //SerialPort ser = new SerialPort();
-            //ser.BaudRate = 9600;
-            //ser.PortName = "COM7";
-            //ser.Open();
+            SerialPort ser = new SerialPort();
+            ser.BaudRate = 9600;
+            ser.PortName = "/dev/ttyACM0";
+            ser.Open();
 
            
             // Poll events from joystick
@@ -84,11 +84,9 @@ namespace RobotController
                 Console.WriteLine(turnSpeed.ToString());
                 Console.WriteLine(globalSpeed.ToString());
 
-                Thread.Sleep(500);
-
-                //ser.WriteLine(controlInt.ToString());
-                //ser.WriteLine(turnSpeed.ToString());
-                //set.WriteLine(globalSpeed.ToString());
+                ser.WriteLine(controlInt.ToString());
+                ser.WriteLine(turnSpeed.ToString());
+                ser.WriteLine(globalSpeed.ToString());
             }
         }
     }
