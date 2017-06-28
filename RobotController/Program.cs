@@ -1,7 +1,6 @@
 ﻿using System;
-using System.IO.Ports;
 using XInputDotNetPure;
-using System.Threading;
+using System.Net.Sockets;
 
 namespace RobotController
 {
@@ -9,71 +8,69 @@ namespace RobotController
     {
         static void Main(string[] args)
         {
-            bool[] controls = new bool[8];
             Console.ForegroundColor = ConsoleColor.Green;
 
-            SerialPort ser = new SerialPort
-            {
-                BaudRate = 9600,
-                PortName = "COM3"
-            };
-            ser.Open();
-            ser.WriteTimeout = 1000;
-            ser.ReadTimeout = 1000;
+            Connect("192.168.1.114", "client_connect");
 
             // Poll events from joystick
             while (true)
             {
                 var gamepad = GamePad.GetState(PlayerIndex.One);
-
-                int turnSpeed = Math.Abs((int)(gamepad.ThumbSticks.Left.X * 255));
-                int globalSpeed = Math.Abs((int) ((gamepad.Triggers.Right - gamepad.Triggers.Left) * 255));
-                bool left = gamepad.ThumbSticks.Left.X < 0;
-                bool right = !left;
-                
-                bool move = globalSpeed > 10;
-                bool headingForward = gamepad.Triggers.Right > gamepad.Triggers.Left;
-
-
-                controls[0] = move;
-                controls[1] = headingForward;
-                controls[2] = left;
-                controls[3] = right;
-                controls[4] = controls[5] = controls[6] = controls[7] = false;
-
-                byte controlByte = 0x00;
-                int index = 0;
-
-                // Loop through the array
-                foreach (bool b in controls)
-                {
-                    // if the element is 'true' set the bit at that position
-                    if (b)
-                        controlByte |= (byte)(1 << (7 - index));
-
-                    index++;
-                }
-
-                //Console.WriteLine(controlByte.ToString());
-                //Console.WriteLine(turnSpeed.ToString());
-                //Console.WriteLine(globalSpeed.ToString());
-                
-                Byte[] data = {controlByte,/*, (byte) turnSpeed, (byte) globalSpeed,*/ 0x0A};
-                //Console.WriteLine("here");
-                //ser.Write(data, 0, 2);
-
-                ser.WriteLine("Ayyyyy");
-                Console.WriteLine("wassup");
-
-                while (ser.BytesToRead > 0)
-                {
-                    Console.WriteLine(ser.ReadLine());
-                }
-
-                Thread.Sleep(5000);
-                break;
             }
-            ser.Close();
+        }
+
+        static void Connect(String server, String message)
+        {
+            try
+            {
+                // Create a TcpClient.
+                // Note, for this client to work you need to have a TcpServer 
+                // connected to the same address as specified by the server, port
+                // combination.
+                Int32 port = 26656;
+                TcpClient client = new TcpClient(server, port);
+
+                // Translate the passed message into ASCII and store it as a Byte array.
+                Byte[] data = System.Text.Encoding.ASCII.GetBytes(message);
+
+                // Get a client stream for reading and writing.
+                //  Stream stream = client.GetStream();
+
+                NetworkStream stream = client.GetStream();
+
+                // Send the message to the connected TcpServer. 
+                stream.Write(data, 0, data.Length);
+
+                Console.WriteLine("Sent: {0}", message);
+
+                // Receive the TcpServer.response.
+
+                // Buffer to store the response bytes.
+                data = new Byte[256];
+
+                // String to store the response ASCII representation.
+                String responseData = String.Empty;
+
+                // Read the first batch of the TcpServer response bytes.
+                Int32 bytes = stream.Read(data, 0, data.Length);
+                responseData = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
+                Console.WriteLine("Received: {0}", responseData);
+
+                // Close everything.
+                stream.Close();
+                client.Close();
+            }
+            catch (ArgumentNullException e)
+            {
+                Console.WriteLine("ArgumentNullException: {0}", e);
+            }
+            catch (SocketException e)
+            {
+                Console.WriteLine("SocketException: {0}", e);
+            }
+
+            Console.WriteLine("\n Press Enter to continue...");
+            Console.Read();
         }
     }
 }
