@@ -1,35 +1,50 @@
 ﻿using System;
 using XInputDotNetPure;
 using System.Net.Sockets;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 
 namespace RobotController
 {
     class Program
     {
+        static String host = "192.168.1.114";
+        static Int32 port = 26656;
+        static TcpClient client;
+
         static void Main(string[] args)
         {
             Console.ForegroundColor = ConsoleColor.Green;
 
-            Connect("192.168.1.114", "client_connect");
+            client = new TcpClient(host, port);
 
             // Poll events from joystick
             while (true)
             {
                 var gamepad = GamePad.GetState(PlayerIndex.One);
+                var jsonObject = new JObject();
+
+                jsonObject.Add("rt", gamepad.Triggers.Right);
+                jsonObject.Add("lt", gamepad.Triggers.Left);
+                jsonObject.Add("x", gamepad.ThumbSticks.Left.X);
+                jsonObject.Add("b", gamepad.Buttons.B == ButtonState.Pressed);
+
+                SendData(JsonConvert.SerializeObject(jsonObject));
+
+                if (gamepad.Buttons.Back != ButtonState.Pressed)
+                {
+                    continue;
+                }
+                break;
             }
+
+            client.Close();
         }
 
-        static void Connect(String server, String message)
+        static void SendData(String message)
         {
             try
             {
-                // Create a TcpClient.
-                // Note, for this client to work you need to have a TcpServer 
-                // connected to the same address as specified by the server, port
-                // combination.
-                Int32 port = 26656;
-                TcpClient client = new TcpClient(server, port);
-
                 // Translate the passed message into ASCII and store it as a Byte array.
                 Byte[] data = System.Text.Encoding.ASCII.GetBytes(message);
 
@@ -56,9 +71,7 @@ namespace RobotController
                 responseData = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
                 Console.WriteLine("Received: {0}", responseData);
 
-                // Close everything.
-                stream.Close();
-                client.Close();
+                //stream.Close();
             }
             catch (ArgumentNullException e)
             {
@@ -68,9 +81,6 @@ namespace RobotController
             {
                 Console.WriteLine("SocketException: {0}", e);
             }
-
-            Console.WriteLine("\n Press Enter to continue...");
-            Console.Read();
         }
     }
 }
